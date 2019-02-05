@@ -100,6 +100,7 @@ type InstallFlags struct {
 	Vault                    bool
 	KnativePipeline          bool
 	BuildPackName            string
+	IncludeValuesFiles       string
 }
 
 // Secrets struct for secrets
@@ -357,6 +358,7 @@ func (options *InstallOptions) addInstallFlags(cmd *cobra.Command, includesInit 
 	cmd.Flags().BoolVarP(&flags.NoGitOpsVault, "no-gitops-vault", "", false, "When using GitOps to create the source code for the development environment this flag disables the creation of a vault")
 	cmd.Flags().BoolVarP(&flags.Vault, "vault", "", false, "Sets up a Hashicorp Vault for storing secrets during installation (supported only for GKE)")
 	cmd.Flags().StringVarP(&flags.BuildPackName, "buildpack", "", "", "The name of the build pack to use for the Team")
+	cmd.Flags().StringVarP(&flags.IncludeValuesFiles, "include-values-files", "", "", "An extra list of value files to include")
 
 	addGitRepoOptionsArguments(cmd, &options.GitRepositoryOptions)
 	options.HelmValuesConfig.AddExposeControllerValues(cmd, true)
@@ -1023,6 +1025,7 @@ func (options *InstallOptions) getHelmValuesFiles(configStore configio.ConfigSto
 		return valuesFiles, secretsFiles, temporaryFiles,
 			errors.Wrap(err, "failed to append the myvalues.yaml file")
 	}
+
 	secretsFiles = append(secretsFiles,
 		[]string{adminSecretsFileName, extraValuesFileName, cloudEnvironmentSecretsLocation}...)
 
@@ -1030,6 +1033,11 @@ func (options *InstallOptions) getHelmValuesFiles(configStore configio.ConfigSto
 		temporaryFiles = append(temporaryFiles, adminSecretsFileName, extraValuesFileName, cloudEnvironmentSecretsLocation)
 	} else {
 		temporaryFiles = append(temporaryFiles, extraValuesFileName, cloudEnvironmentSecretsLocation)
+	}
+
+	log.Infof("Including values files %s\n", util.ColorInfo(options.Flags.IncludeValuesFiles))
+	if options.Flags.IncludeValuesFiles != "" {
+		valuesFiles = append(valuesFiles, strings.Split(options.Flags.IncludeValuesFiles, ",")...)
 	}
 
 	return util.FilterFileExists(valuesFiles), util.FilterFileExists(secretsFiles), util.FilterFileExists(temporaryFiles), nil
